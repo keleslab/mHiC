@@ -16,6 +16,13 @@ core=$8
 cutsite=$9 #AAGCTAGCTT for HindIII
 seqLength=${10:-25} #>=25 enforced by mHiC
 summaryFile=${11:-"mHiC.summary"}
+saveFiles=${12:-"1"}
+
+## refresh summary file
+if [ -e "$summaryFile" ]; then
+    rm -rf $summaryFile
+    touch $summaryFile
+fi
 
 ## min length for chimeric reads is enforced to be 25bp
 if [ "$seqLength" -lt "25" ]; then
@@ -46,7 +53,7 @@ do
     # step1.3 - trim and filter unmapped
     echo "Step1.3 - Trim unmapped reads until the restriction enzyme cutting site."
     $samtoolsDir/samtools fastq $resultsDir/$name\_unmapped_$i.sam >$resultsDir/$name\_unmapped_$i.fastq
-    $bin/cutsite_trimming_Ye --fastq $resultsDir/$name\_unmapped_$i.fastq --cutsite $cutsite --out $resultsDir/$name\_unmapped_trim_$i.fastq --rmuntrim
+    $bin/cutsite_trimming_mHiC --fastq $resultsDir/$name\_unmapped_$i.fastq --cutsite $cutsite --out $resultsDir/$name\_unmapped_trim_$i.fastq --rmuntrim
 
     awk -v minLen=$seqLength 'BEGIN {OFS = "\n"} {header = $0 ; getline seq ; getline qheader ; getline qseq ; if (length(seq) >= minLen) {print header, seq, qheader, qseq}}' < $resultsDir/$name\_unmapped_trim_$i.fastq >$resultsDir/$name\_unmapped_trim_filter_$i.fastq
 
@@ -81,6 +88,8 @@ echo -e "Second stage alignment aligned multi-reads 1: "$chimericMulti1 >>$summa
 echo -e "Second stage alignment aligned multi-reads 2: "$chimericMulti2 >>$summaryFile
 
 #Remove redundant files
-rm -rf $resultsDir/*sai
-rm -rf $resultsDir/*unmapped*
-rm -rf $resultsDir/*raw*
+if [ "$saveFiles" -eq "0" ]; then
+    rm -rf $resultsDir/*sai
+    rm -rf $resultsDir/*unmapped*
+    rm -rf $resultsDir/*raw*
+fi
